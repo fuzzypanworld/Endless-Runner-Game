@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Endless Runner Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #87CEEB;
+      overflow: hidden;
+    }
+
+    #gameCanvas {
+      background: #87CEEB;
+      border: 2px solid #000;
+      display: block;
+      margin: 20px auto;
+    }
+
+    #startScreen, #gameOverScreen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    #startScreen button, #gameOverScreen button {
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="startScreen">
+    <h1>Endless Runner Game</h1>
+    <button onclick="startGame()">Start Game</button>
+  </div>
+
+  <div id="gameOverScreen" style="display: none;">
+    <h1>Game Over</h1>
+    <p id="finalScore"></p>
+    <button onclick="restartGame()">Restart</button>
+  </div>
+
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const playerImages = [
+      new Image(),
+      new Image()
+    ];
+    playerImages[0].src = 'player.png';
+    playerImages[1].src = 'player2.png';
+    let currentImageIndex = 0;
+    let imageSwitchFrame = 0;
+
+    const player = {
+      x: 50,
+      y: 300,
+      width: 80,
+      height: 80,
+      dy: 0,
+      gravity: 0.7,
+      jumpForce: -15,
+      grounded: false
+    };
+
+    const obstacles = [];
+    let frame = 0;
+    const keys = {};
+    let score = 0;
+    let gameActive = false;
+
+    function drawPlayer() {
+      if (frame - imageSwitchFrame > 15) { // Switch image every half second (assuming 60 FPS)
+        currentImageIndex = (currentImageIndex + 1) % playerImages.length;
+        imageSwitchFrame = frame;
+      }
+      ctx.drawImage(playerImages[currentImageIndex], player.x, player.y, player.width, player.height);
+    }
+
+    function drawObstacles() {
+      ctx.fillStyle = '#33FF57';
+      obstacles.forEach(obstacle => {
+        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+      });
+    }
+
+    function updateObstacles() {
+      if (frame % 150 === 0) {
+        const obstacleHeight = Math.random() * (100 - 50) + 50;
+        obstacles.push({
+          x: canvas.width,
+          y: canvas.height - obstacleHeight,
+          width: 50,
+          height: obstacleHeight
+        });
+      }
+      obstacles.forEach(obstacle => {
+        obstacle.x -= 6;
+      });
+      obstacles.forEach((obstacle, index) => {
+        if (obstacle.x + obstacle.width < 0) {
+          obstacles.splice(index, 1);
+          score += 10;
+        }
+      });
+    }
+
+    function jump() {
+      if (player.grounded) {
+        player.dy = player.jumpForce;
+        player.grounded = false;
+      }
+    }
+
+    function handleInput() {
+      if (keys['Space'] || keys['ArrowUp']) {
+        jump();
+      }
+    }
+
+    function updatePlayer() {
+      player.dy += player.gravity;
+      player.y += player.dy;
+      if (player.y >= canvas.height - player.height) {
+        player.y = canvas.height - player.height;
+        player.dy = 0;
+        player.grounded = true;
+      }
+    }
+
+    function detectCollisions() {
+      obstacles.forEach(obstacle => {
+        if (player.x < obstacle.x + obstacle.width &&
+          player.x + player.width > obstacle.x &&
+          player.y < obstacle.y + obstacle.height &&
+          player.y + player.height > obstacle.y) {
+            endGame();
+        }
+      });
+    }
+
+    function drawScore() {
+      ctx.fillStyle = 'black';
+      ctx.font = '20px Arial';
+      ctx.fillText(`Score: ${score}`, 20, 30);
+    }
+
+    function startGame() {
+      document.getElementById('startScreen').style.display = 'none';
+      gameActive = true;
+      gameLoop();
+    }
+
+    function endGame() {
+      gameActive = false;
+      document.getElementById('gameOverScreen').style.display = 'block';
+      document.getElementById('finalScore').innerText = `Your Score: ${score}`;
+    }
+
+    function restartGame() {
+      document.getElementById('gameOverScreen').style.display = 'none';
+      player.y = 300;
+      player.dy = 0;
+      obstacles.length = 0;
+      score = 0;
+      frame = 0;
+      currentImageIndex = 0;
+      imageSwitchFrame = 0;
+      gameActive = true;
+      gameLoop();
+    }
+
+    function gameLoop() {
+      if (!gameActive) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      handleInput();
+      updatePlayer();
+      updateObstacles();
+      detectCollisions();
+      drawPlayer();
+      drawObstacles();
+      drawScore();
+      frame++;
+      requestAnimationFrame(gameLoop);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+    });
+  </script>
+</body>
+</html>
